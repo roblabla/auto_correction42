@@ -88,17 +88,35 @@ async function check_slots(tok, project_id, project_name) {
   }
 }
 
+function refreshTokens(refreshToken) {
+  return request.post("https://api.intra.42.fr/oauth/token")
+    .send({
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    })
+}
+
 async function main() {
-  const tok = await login();
-  const projects = (await get_projects(tok)).filter(v => v.status === "waiting_for_correction");
+  let { access_token, refresh_token, expires_in } = await login();
+  const projects = (await get_projects(access_token)).filter(v => v.status === "waiting_for_correction");
   const project = (await inquirer.prompt({
     name: 'project',
     message: 'Chose the project you want to watch',
     type: 'list',
     choices: projects.map((v, i) => ({ name: v.project.name, value: v.project }))
   })).project;
-  check_slots(tok, project.id, project.name);
-  setInterval(check_slots.bind(null, tok, project_id), 300000);
+  check_slots(access_token, project.id, project.name);
+  let interval = setInterval(check_slots.bind(null, access_token, project.id, project.name), 60 * 1000);
+  async function refreshTokensLogic() {
+	console.log("Refreshing access token");
+    clearInterval(interval);
+    ({ access_token, refresh_token, expires_in} = await refreshTokens(refresh_token));
+    interval = setInterval(check_slots.bind(null, access_token, project.id, project.name), 60 * 1000);
+	setTimeout(refreshTokensLogic, expires_in * 1000);
+  }
+  setTimeout(refreshTokensLogic, expires_in * 1000);
 }
 
 main().catch(function(err) {
