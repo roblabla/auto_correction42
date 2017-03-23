@@ -46,7 +46,7 @@ function login() {
         state: "meh"
       })
   }).then(function(res) {
-    return res.body.access_token;
+    return res.body;
   });
 }
 
@@ -64,7 +64,7 @@ async function get_slots(tok, project_id) {
   return res.body;
 }
 
-async function check_slots(tok, project_id) {
+async function check_slots(tok, project_id, project_name) {
   console.log("Checking corrections");
   const slots = await get_slots(tok, project_id);
   console.log("Slots available : ", slots.length);
@@ -79,7 +79,7 @@ async function check_slots(tok, project_id) {
         if (err)
           throw err;
         if (metadata.activationType === 'actionClicked') {
-          console.log("Clicked");
+          opn("https://projects.intra.42.fr/projects/" + project_name + "/slots");
         }
       })
     });
@@ -91,13 +91,13 @@ async function check_slots(tok, project_id) {
 async function main() {
   const tok = await login();
   const projects = (await get_projects(tok)).filter(v => v.status === "waiting_for_correction");
-  const project_id = (await inquirer.prompt({
+  const project = (await inquirer.prompt({
     name: 'project',
     message: 'Chose the project you want to watch',
     type: 'list',
-    choices: projects.map((v, i) => ({ name: v.project.name, value: v.project.id }))
+    choices: projects.map((v, i) => ({ name: v.project.name, value: v.project }))
   })).project;
-  check_slots(tok, project_id);
+  check_slots(tok, project.id, project.name);
   setInterval(check_slots.bind(null, tok, project_id), 300000);
 }
 
