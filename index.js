@@ -8,6 +8,7 @@ const url = require('url');
 const http = require('http');
 const opn = require('opn');
 const inquirer = require('inquirer');
+const notifier = require('node-notifier');
 
 Promise.config({ longStackTraces: true });
 
